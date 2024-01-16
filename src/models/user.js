@@ -10,7 +10,7 @@ username:{
     required:true,
     trim:true,
     index:true,
-    minlength:1
+    minlength:3
 },
 email:{
     type:String,
