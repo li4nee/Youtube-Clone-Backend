@@ -23,4 +23,9 @@ function validateUsername(username) {
     return regex.test(fullName);
   }
 
-  export {validateEmail,validatePassword,validateUsername,validateFullName}
+  export const validationRules = {
+    username: validateUsername,
+    email: validateEmail,
+    password: validatePassword,
+    fullName: validateFullName,
+  };
