@@ -15,7 +15,7 @@ try {
     }
   const response = await cloudinary.uploader.upload(LocalPath,{resource_type:auto});
     // file uploaded sucessfully
-    console.log("file uploaded on cloudinary");
+    console.log("file uploaded on cloudinary !!! ",response.url);
     return response;
 
 } catch (error) {

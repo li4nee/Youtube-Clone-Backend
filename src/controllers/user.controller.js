@@ -2,8 +2,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { generateErrorResponse} from "../utils/apiError.js";
 import { validateEmail,validateFullName,validatePassword,validateUsername } from "../utils/validation.utils.js";
 import { User } from "../models/user.js";
-
-
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { apiResponse } from "../utils/apiResponse.js";
 
 const registerUser = asyncHandler(async(req,res)=>{
  
@@ -38,10 +38,42 @@ const existingUser = await User.findOne({
 if (existingUser) {
     throw generateErrorResponse(400, "User Already Exists, Please log in");
 }
-console.log(existingUser);
+
+const avatarlocalpath = req.file?.avatar[0]?.path;
+const coverlocalpath = req.file?.coverImage[0]?.path;
+
+if(!avatarlocalpath)
+{
+    throw generateErrorResponse(400,"avatar file is required")
+}
+
+const avatar = await uploadOnCloudinary(avatarlocalpath);
+const coverimage= await uploadOnCloudinary(coverlocalpath);
+
+if(!avatar)
+{
+    throw generateErrorResponse(400,"avatar file is required")
+}
 
 
-res.send("ok boss");
+const userdetails = User.create({
+    fullname:fullname,
+    email:email,
+    username:username.toLowerCase(),
+    avatar:avatar.url,
+    coverimage:coverimage?.url || " ",
+    password:password
 })
 
+const createdUser = await User.findById(User._id).select("-password -refreshToken");
+
+if(!createdUser)
+{
+ throw generateErrorResponse(500,"User Registration Went Wrong");
+}
+
+return res.status(201).json(
+    new apiResponse(201,createdUser,"User sucessfully registered")
+)
+})
 export {registerUser} ;
