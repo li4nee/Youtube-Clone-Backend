@@ -60,15 +60,15 @@ userSchema.methods.isPasswordCorrect = async function(password)
 return await bcrypt.compare(password, this.password); // returns true or false
 }
 
-userSchema.methods.generateAccessToken = function()
+userSchema.methods.generateAccessToken = async function()
 {
-    let token = jwt.sign({_id:this._id, email:this.email},process.env.ACCESSTOKEN_PRIVATEKEY,{expiresIn:process.env.ACCESSTOKEN_EXP});
+    let token = await jwt.sign({_id:this._id, email:this.email},process.env.ACCESSTOKEN_PRIVATEKEY,{expiresIn:process.env.ACCESSTOKEN_EXP});
     return token;
 }
 
-userSchema.methods.generateRefreshToken =  function()
+userSchema.methods.generateRefreshToken = async  function()
 {
-    let token =  jwt.sign({_id:this._id}, process.env.REFRESHTOKEN_PRIVATEKEY,{expiresIn:process.env.REFRESHTOKEN_EXP});
+    let token = await jwt.sign({_id:this._id}, process.env.REFRESHTOKEN_PRIVATEKEY,{expiresIn:process.env.REFRESHTOKEN_EXP});
     return token;
 }
 
