@@ -4,7 +4,7 @@ import { validationRules} from "../utils/validation.utils.js";
 import { User } from "../models/user.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiResponse.js";
-
+import jwt from 'jsonwebtoken';
 const generateAccessAndRefreshToken = async (userId)=>{
     try
     {
@@ -100,7 +100,7 @@ return res.json(
 
 const loginUser = asyncHandler(async(req,res)=>{
 const {email,username,password}= req.body;
-if(!email || !username)
+if(!email && !username)
 {
     throw generateErrorResponse(400,"Either username or email is required");
 }
@@ -141,7 +141,35 @@ const logOutUser = asyncHandler(async (req,res)=>{
         httpOnly:true,
         secure:true
     }
-    return await res.status(200).clearcookie("accessToken",options).clearcookie("refreshToken",options).json(new apiResponse(200,{},"logged out successfully"));
+    return await res.status(200).clearCookie("accessToken",options).clearCookie("refreshToken",options).json(new apiResponse(200,{},"logged out successfully"));
 })
 
-export {registerUser,loginUser,logOutUser} ;
+
+const refreshAccessToken = asyncHandler(async(req,res)=>{
+  try {
+      const incomingRefreshToken=req.cookies.refreshToken || req.body.refreshToken;
+      if(!incomingRefreshToken)
+      {
+          throw generateErrorResponse(400,"Unauthorized Error");
+      }
+      const decoded =  jwt.verify(incomingRefreshToken, process.env.REFRESHTOKEN_PRIVATEKEY);
+      const decodedUser = await User.findById(decoded._id);
+      if(!decodedUser)
+      {
+          throw generateErrorResponse(400,"Invalid refresh token")
+      }
+      if(incomingRefreshToken!==decodedUser.refreshToken)
+      {
+          throw generateErrorResponse(400,"Refresh Token invalid or expired")
+      }
+      const options={
+          httpOnly:true,
+          secure:true
+      };
+      const {accessToken,refreshToken}=await generateAccessAndRefreshToken(validuser._id);
+      return res.status(200).cookie("accessToken",accessToken,options).cookie("refreshToken",refreshToken,options).json(new apiResponse(200,{accessToken,refreshToken}));
+  } catch (error) {
+    throw generateErrorResponse(400,"Invalid  refresh token")
+  }
+})
+export {registerUser,loginUser,logOutUser,refreshAccessToken} ;
