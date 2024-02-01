@@ -3,7 +3,7 @@ import { generateErrorResponse} from "../utils/apiError.js";
 import { validationRules} from "../utils/validation.utils.js";
 import { User } from "../models/user.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
-import { apiResponse } from "../utils/apiResponse.js";
+import apiResponse  from "../utils/apiResponse.js";
 import jwt from 'jsonwebtoken';
 const generateAccessAndRefreshToken = async (userId)=>{
     try
@@ -129,7 +129,7 @@ const options={
 }
 
 return res.status(200).cookie("accessToken",accessToken,options).cookie("refreshToken",refreshToken,options).json(new apiResponse(200,{user:loggedInUser,accessToken,refreshToken},"User logged in sucessfully"));
-})
+});
 
 
 const logOutUser = asyncHandler(async (req,res)=>{
@@ -142,7 +142,7 @@ const logOutUser = asyncHandler(async (req,res)=>{
         secure:true
     }
     return await res.status(200).clearCookie("accessToken",options).clearCookie("refreshToken",options).json(new apiResponse(200,{},"logged out successfully"));
-})
+});
 
 
 const refreshAccessToken = asyncHandler(async(req,res)=>{
@@ -171,5 +171,78 @@ const refreshAccessToken = asyncHandler(async(req,res)=>{
   } catch (error) {
     throw generateErrorResponse(400,"Invalid  refresh token")
   }
-})
-export {registerUser,loginUser,logOutUser,refreshAccessToken} ;
+});
+
+
+const changePassword= asyncHandler(async(req,res)=>{
+const {oldPassword,newPassword}=await req.body;
+const {_id}=await req.user;
+const user = await User.findById(_id);
+const isPasswordCorrect=await user.isPasswordCorrect(oldPassword);
+if(!isPasswordCorrect)
+{
+    throw generateErrorResponse(400,"Password is incorrect");
+}
+user.password=await newPassword;
+await user.save({validateBeforeSave:false});
+return res.status(200).json(new apiResponse(200,{},"Password Sucessfully Chnaged"));
+});
+
+const getCurrentUser = asyncHandler(async(req,res)=>{
+    const user = await req.user;
+    return res.status(200).json(new apiResponse(200,user,"Current User Details Sent"))
+});
+
+const updateCurrentUserText = asyncHandler(async(req,res)=>{
+    const {fullname,email}=await res.body;
+    if(!(fullname && email))
+    {
+        throw generateErrorResponse(400,"Nothing to update");
+    }
+    const _id= await req.user?._id;
+   const updatedUser = await User.findByIdAndUpdate({_id},{
+    $set:{fullname,email}
+   },{new:true}).select("-password -token");
+   return res.status(200).json(new apiResponse(200,updatedUser,"User is updated"))
+
+});
+
+
+const updateCurrentUserAvatar= asyncHandler(async(req,res)=>{
+    const localpath = await req.file?.path;
+    if(!localpath)
+    {
+        throw generateErrorResponse(400,"File is missing");
+    }
+    const avatar = await uploadOnCloudinary(localpath);
+    if(!avatar.url)
+    {
+        throw generateErrorResponse(500,"Some Error in uploading avatar");
+    }
+    const updateduser = await User.findByIdAndUpdate(req.user?._id,{
+        $set:{avatar:avatar.url}
+    },{new:true}).select("-password , -token");
+
+    return res.status(200).json(new apiResponse(200,updateduser,"Avatar Updated"));
+});
+
+
+const updateCurrentUserCoverImage= asyncHandler(async(req,res)=>{
+    const localpath = await req.file?.path;
+    if(!localpath)
+    {
+        throw generateErrorResponse(400,"File is missing");
+    }
+    const coverimage = await uploadOnCloudinary(localpath);
+    if(!coverimage.url)
+    {
+        throw generateErrorResponse(500,"Some Error in uploading avatar");
+    }
+    const updateduser = await User.findByIdAndUpdate(req.user?._id,{
+        $set:{coverimage:coverimage.url}
+    },{new:true}).select("-password , -token");
+
+    return res.status(200).json(new apiResponse(200,updateduser,"CoverImage Updated"));
+});
+
+export {registerUser,loginUser,logOutUser,refreshAccessToken,changePassword,updateCurrentUserAvatar,updateCurrentUserText,updateCurrentUserCoverImage,getCurrentUser} ;
